@@ -5,15 +5,16 @@ import { ethers } from "ethers"
 import { useNotification } from "web3uikit"
 
 const LotteryEntrance = () => {
-    const { chainId: chainIdHex, isWeb3Enabled } = useMoralis()
-    const chainId = parseInt(chainIdHex)
-    const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null
-
+    // manage state
     const [entranceFee, setEntranceFee] = useState("0")
     const [numPlayers, setNumPlayers] = useState("0")
     const [recentWinner, setRecentWinner] = useState("0")
 
     const dispatch = useNotification()
+
+    const { chainId: chainIdHex, isWeb3Enabled } = useMoralis()
+    const chainId = parseInt(chainIdHex)
+    const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null
 
     const { runContractFunction: enterRaffle } = useWeb3Contract({
         abi: abi,
@@ -71,6 +72,13 @@ const LotteryEntrance = () => {
         await tx.wait(1)
         handleNewNotification(tx)
         updateUI()
+
+        // now that there's at least one player, listen for winner pick event to be emitted by the contract
+        const provider = new ethers.providers.JsonRpcProvider("http://localhost:8545")
+        const contract = new ethers.Contract(raffleAddress, abi, provider)
+        contract.on("WinnerPicked", (winnerAddress) => {
+            setRecentWinner(winnerAddress)
+        })
     }
 
     const handleNewNotification = function () {
