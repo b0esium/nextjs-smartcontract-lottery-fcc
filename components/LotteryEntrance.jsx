@@ -2,7 +2,6 @@ import { useWeb3Contract, useMoralis } from "react-moralis"
 import { abi, contractAddresses } from "../constants"
 import { useEffect, useState } from "react"
 import { ethers } from "ethers"
-import { useNotification } from "web3uikit"
 
 const LotteryEntrance = () => {
     // manage state
@@ -10,15 +9,14 @@ const LotteryEntrance = () => {
     const [numPlayers, setNumPlayers] = useState("0")
     const [recentWinner, setRecentWinner] = useState("0")
 
-    const dispatch = useNotification()
-
     const { chainId: chainIdHex, isWeb3Enabled } = useMoralis()
     const chainId = parseInt(chainIdHex)
     const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null
 
     const {
         runContractFunction: enterRaffle,
-        data: isLoading,
+        data: enterTxResponse,
+        isLoading,
         isFetching,
     } = useWeb3Contract({
         abi: abi,
@@ -74,7 +72,6 @@ const LotteryEntrance = () => {
 
     const handleSuccess = async function (tx) {
         await tx.wait(1)
-        handleNewNotification(tx)
         updateUI()
 
         // now that there's at least one player, listen for winner pick event to be emitted by the contract
@@ -82,16 +79,6 @@ const LotteryEntrance = () => {
         const contract = new ethers.Contract(raffleAddress, abi, provider)
         contract.on("WinnerPicked", (winnerAddress) => {
             setRecentWinner(winnerAddress)
-        })
-    }
-
-    const handleNewNotification = function () {
-        dispatch({
-            type: "info",
-            message: "Transaction complete!",
-            title: "Tx Notification",
-            position: "topR",
-            icon: "bell",
         })
     }
 
